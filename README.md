@@ -2,6 +2,15 @@
 
 Terraform molecule that composes a CloudWatch metric alarm with an SNS topic and subscriptions for alerting.
 
+## Features
+
+- **Metric alarm + notification in one module** — wires a `aws_cloudwatch_metric_alarm` to a dedicated SNS topic so alarm state changes fan out to subscribers automatically.
+- **Configurable alarm semantics** — comparison operator, evaluation periods, period, statistic, threshold, dimensions, and `treat_missing_data` are all exposed as inputs.
+- **OK-state notifications** — `notify_on_ok` (default `true`) also routes the alarm's return-to-OK transition through the same SNS topic.
+- **Flexible subscriptions** — a `subscriptions` list creates any mix of `email`, `lambda`, `sqs`, `https`, etc. endpoints on the topic.
+- **Optional SNS encryption** — `sns_kms_key_id` enables server-side encryption for the topic at rest.
+- **tf-label context chaining** — inherits the standard `namespace`/`stage`/`name`/`environment` labelling and `enabled` toggle from `tf-label`; setting `enabled = false` creates no resources.
+
 ## Atoms Composed
 
 | Atom | Purpose |
@@ -101,3 +110,21 @@ No resources.
 | <a name="output_topic_arn"></a> [topic\_arn](#output\_topic\_arn) | ARN of the SNS topic |
 | <a name="output_topic_name"></a> [topic\_name](#output\_topic\_name) | Name of the SNS topic |
 <!-- END_TF_DOCS -->
+
+## Tests
+
+Unit tests use a mock AWS provider (no real AWS calls) and assert on plan-known
+values only — the derived `tf-label` id, the `enabled` flag, and subscription
+fan-out counts. The disabled path asserts that the count-gated atoms produce
+`null` arns.
+
+```bash
+# Unit tests (mock provider, plan-only)
+terraform test -test-directory=tests/unit
+
+# Integration tests (real provider)
+terraform test -test-directory=tests/integration
+
+# Or via the Makefile
+make test
+```
